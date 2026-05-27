@@ -1,0 +1,19 @@
+type Provider @entity(immutable: false) {
+  id:          ID!      # provider address (hex, lowercase)
+  endpoint:    String!
+  geoHash:     String!
+  registered:  Boolean!
+  paymentsDestination: Bytes!
+  services:    [ServiceRegistration!]! @derivedFrom(field: "provider")
+  registeredAt: BigInt!
+}
+
+type ServiceRegistration @entity(immutable: false) {
+  id:       ID!   # provider-tier, e.g. "0xabc...-0"
+  provider: Provider!
+  tier:     Int!  # 0=BASIC 1=DECODED 2=SQL
+  endpoint: String!
+  active:   Boolean!
+  startedAt: BigInt!
+  stoppedAt: BigInt
+}

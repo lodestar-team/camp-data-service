@@ -1,0 +1,3 @@
+[workspace]
+members  = ["crates/camp-gateway"]
+resolver = "2"

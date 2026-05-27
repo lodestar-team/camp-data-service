@@ -1,0 +1,36 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: CampDataService
+    network: arbitrum-sepolia
+    source:
+      # Update after deployment:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: CampDataService
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Provider
+        - ServiceRegistration
+      abis:
+        - name: CampDataService
+          file: ./abis/CampDataService.json
+      eventHandlers:
+        - event: ProviderRegistered(indexed address,string,string)
+          handler: handleProviderRegistered
+        - event: ProviderDeregistered(indexed address)
+          handler: handleProviderDeregistered
+        - event: PaymentsDestinationSet(indexed address,indexed address)
+          handler: handlePaymentsDestinationSet
+        - event: ServiceStarted(indexed address,uint8,string)
+          handler: handleServiceStarted
+        - event: ServiceStopped(indexed address,uint8)
+          handler: handleServiceStopped
+      file: ./src/mapping.ts

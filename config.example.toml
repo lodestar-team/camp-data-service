@@ -1,0 +1,47 @@
+[server]
+host = "0.0.0.0"
+port = 8090
+
+[indexer]
+# Your provider's on-chain address — must match the address used in register().
+service_provider_address = "0x..."
+# Hex-encoded 32-byte operator private key (signs collect() transactions).
+operator_private_key = "0x..."
+
+[tap]
+# CampDataService contract address (set after deployment).
+data_service_address = "0x..."
+# Gateway / signer addresses authorised to issue TAP receipts.
+# Leave empty to accept receipts from any signer.
+authorized_senders = ["0x..."]
+# EIP-712 domain — must match the deployed GraphTallyCollector.
+eip712_domain_name        = "GraphTallyCollector"
+eip712_chain_id           = 421614              # Arbitrum Sepolia
+eip712_verifying_contract = "0xacC71844EF6beEF70106ABe6E51013189A1f3738"
+# Maximum age of a receipt before it is rejected (nanoseconds).
+max_receipt_age_ns = 30_000_000_000             # 30 seconds
+# TAP aggregator URL (POST /rav/aggregate).
+# Run dispatch-gateway or any compatible TAP aggregator.
+aggregator_url = "http://localhost:8080"
+aggregation_interval_secs = 60
+
+[backend]
+# URL of the camp REST API this gateway proxies to.
+# Locally: http://localhost:3000
+# Or point directly at the nginx/ampd tunnel on the ThinkPad.
+camp_url = "http://localhost:3000"
+
+[database]
+url = "postgres://camp:camp@localhost:5432/camp_gateway"
+
+# Optional: on-chain RAV collection.
+# Without this section the gateway accumulates RAVs but never submits them on-chain.
+[collector]
+arbitrum_rpc_url      = "https://sepolia-rollup.arbitrum.io/rpc"
+collect_interval_secs = 3600
+# Minimum GRT wei to collect (avoids dust gas spend).
+min_collect_value = "1_000_000_000_000_000"   # 0.001 GRT
+
+[rate_limit]
+requests_per_second = 20
+burst_size          = 40

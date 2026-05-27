@@ -1,0 +1,19 @@
+{
+  "name": "@camp-data-service/indexer-agent",
+  "version": "0.1.0",
+  "description": "Automates the CampDataService provider lifecycle on The Graph Horizon",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev":   "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript":   "^5.0.0",
+    "ts-node":      "^10.0.0",
+    "@types/node":  "^20.0.0"
+  }
+}

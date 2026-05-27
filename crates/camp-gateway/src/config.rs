@@ -1,0 +1,139 @@
+//! Gateway configuration — loaded from a TOML file at startup.
+//!
+//! Path: env var GATEWAY_CONFIG, defaults to "config.toml".
+
+use alloy_primitives::Address;
+use anyhow::{Context, Result};
+use serde::{Deserialize, Deserializer};
+
+fn de_u128<'de, D: Deserializer<'de>>(d: D) -> Result<u128, D::Error> {
+    use serde::de::Error;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Raw {
+        Int(i64),
+        Str(String),
+    }
+    match Raw::deserialize(d)? {
+        Raw::Int(n) => u128::try_from(n).map_err(|_| D::Error::custom("negative u128")),
+        Raw::Str(s) => s.trim().replace('_', "").parse::<u128>().map_err(D::Error::custom),
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Config {
+    pub server:     ServerConfig,
+    pub indexer:    IndexerConfig,
+    pub tap:        TapConfig,
+    pub backend:    BackendConfig,
+    pub database:   DatabaseConfig,
+    pub collector:  Option<CollectorConfig>,
+    #[serde(default)]
+    pub rate_limit: RateLimitConfig,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ServerConfig {
+    #[serde(default = "default_host")]
+    pub host: String,
+    #[serde(default = "default_port")]
+    pub port: u16,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct IndexerConfig {
+    /// The provider's on-chain address (must match the address used in register()).
+    pub service_provider_address: Address,
+    /// Hex-encoded 32-byte operator private key — signs collect() transactions.
+    pub operator_private_key: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct TapConfig {
+    /// CampDataService contract address (set after deployment).
+    pub data_service_address: Address,
+    /// Addresses authorised to issue TAP receipts (typically the consumer-side gateway).
+    /// Empty = accept receipts from any signer.
+    #[serde(default)]
+    pub authorized_senders: Vec<Address>,
+    /// EIP-712 domain name for GraphTallyCollector.
+    pub eip712_domain_name: String,
+    /// Chain ID where GraphTallyCollector is deployed.
+    /// 421614 = Arbitrum Sepolia (testnet), 42161 = Arbitrum One (mainnet).
+    #[serde(default = "default_tap_chain_id")]
+    pub eip712_chain_id: u64,
+    /// GraphTallyCollector contract address.
+    #[serde(default = "default_tap_verifying_contract")]
+    pub eip712_verifying_contract: Address,
+    /// Maximum age of a TAP receipt before rejection (nanoseconds). Default: 30s.
+    #[serde(default = "default_max_receipt_age_ns")]
+    pub max_receipt_age_ns: u64,
+    /// Base URL of the TAP aggregator's /rav/aggregate endpoint.
+    pub aggregator_url: Option<String>,
+    /// How often to run RAV aggregation (seconds). Default: 60.
+    #[serde(default = "default_aggregation_interval_secs")]
+    pub aggregation_interval_secs: u64,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BackendConfig {
+    /// Base URL of the camp REST API this gateway proxies to.
+    /// e.g. "http://localhost:3000" when running alongside a local camp instance.
+    pub camp_url: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct DatabaseConfig {
+    pub url: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct CollectorConfig {
+    /// Arbitrum RPC URL used to submit collect() transactions.
+    pub arbitrum_rpc_url: String,
+    /// How often to check for unredeemed RAVs (seconds). Default: 3600.
+    #[serde(default = "default_collect_interval_secs")]
+    pub collect_interval_secs: u64,
+    /// Skip RAVs below this GRT wei threshold (avoids dust gas spend).
+    #[serde(default, deserialize_with = "de_u128")]
+    pub min_collect_value: u128,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct RateLimitConfig {
+    /// Requests per second allowed per IP. Default: 20.
+    #[serde(default = "default_rps")]
+    pub requests_per_second: u32,
+    /// Additional burst capacity above the steady-state rate. Default: 40.
+    #[serde(default = "default_burst")]
+    pub burst_size: u32,
+}
+
+impl Default for RateLimitConfig {
+    fn default() -> Self {
+        Self { requests_per_second: default_rps(), burst_size: default_burst() }
+    }
+}
+
+impl Config {
+    pub fn load() -> Result<Self> {
+        let path =
+            std::env::var("GATEWAY_CONFIG").unwrap_or_else(|_| "config.toml".to_string());
+        let contents = std::fs::read_to_string(&path)
+            .with_context(|| format!("failed to read config from {path}"))?;
+        toml::from_str(&contents).context("failed to parse config")
+    }
+}
+
+fn default_host() -> String { "0.0.0.0".to_string() }
+fn default_port() -> u16 { 8090 }
+fn default_rps() -> u32 { 20 }
+fn default_burst() -> u32 { 40 }
+fn default_tap_chain_id() -> u64 { 421614 } // Arbitrum Sepolia
+fn default_tap_verifying_contract() -> Address {
+    // GraphTallyCollector on Arbitrum Sepolia
+    "0xacC71844EF6beEF70106ABe6E51013189A1f3738".parse().unwrap()
+}
+fn default_max_receipt_age_ns() -> u64 { 30_000_000_000 }      // 30 seconds
+fn default_aggregation_interval_secs() -> u64 { 60 }
+fn default_collect_interval_secs() -> u64 { 3600 }
