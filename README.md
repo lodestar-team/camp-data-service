@@ -138,15 +138,18 @@ cargo build --release
 ### Deploy the contract
 
 ```bash
-cd contracts
+# From the repo root (foundry.toml lives here):
 forge install graphprotocol/contracts --no-git
 forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-git
 
 forge build
 forge test -vvv
 
-cp ../.env.example ../.env
-# Fill in PRIVATE_KEY, OWNER, PAUSE_GUARDIAN
+# Set deploy env vars:
+export PRIVATE_KEY=0x...     # deployer private key
+export OWNER=0x...           # governance address (receives onlyOwner rights)
+export PAUSE_GUARDIAN=0x...  # address authorised to pause in an emergency
+
 forge script contracts/script/Deploy.s.sol \
   --rpc-url arbitrum_sepolia \
   --private-key $PRIVATE_KEY \
@@ -294,7 +297,7 @@ burst_size          = 40
 forge test -vvv
 ```
 
-Tests cover the full provider lifecycle: `register`, `startService`, `stopService`, `deregister`, `collect` error paths, governance, UUPS upgrade, and pause mechanics.
+27 tests covering the full provider lifecycle: `register`, `startService`, `stopService`, `deregister`, `collect` error paths, governance, UUPS upgrade, and pause mechanics.
 
 ### Rust unit tests
 
@@ -302,7 +305,7 @@ Tests cover the full provider lifecycle: `register`, `startService`, `stopServic
 cargo test
 ```
 
-Tests cover TAP receipt validation (EIP-712 round-trip, staleness, unauthorized sender, wrong data service), pricing CU computation, and duplicate nonce rejection.
+18 tests covering TAP receipt validation (EIP-712 round-trip, staleness, unauthorized sender, wrong data service), pricing CU computation, and duplicate nonce rejection.
 
 ---
 
