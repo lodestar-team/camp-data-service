@@ -8,6 +8,7 @@ import {CampDataService} from "../src/CampDataService.sol";
 import {ICampDataService} from "../src/interfaces/ICampDataService.sol";
 import {IGraphPayments} from "@graphprotocol/interfaces/contracts/horizon/IGraphPayments.sol";
 import {IGraphTallyCollector} from "@graphprotocol/interfaces/contracts/horizon/IGraphTallyCollector.sol";
+import {IHorizonStaking} from "@graphprotocol/interfaces/contracts/horizon/IHorizonStaking.sol";
 import {ControllerMock} from "@graphprotocol/horizon/mocks/ControllerMock.sol";
 
 contract CampDataServiceTest is Test {
@@ -69,29 +70,25 @@ contract CampDataServiceTest is Test {
 
     /// Mock HorizonStaking.isAuthorized so `caller` is authorised for `sp`.
     function _mockAuthorized(address sp, address caller) internal {
+        // HorizonStaking.isAuthorized(serviceProvider, verifier, operator)
         vm.mockCall(
             staking,
-            abi.encodeWithSignature("isAuthorized(address,address,address)", sp, caller, address(ds)),
+            abi.encodeWithSignature("isAuthorized(address,address,address)", sp, address(ds), caller),
             abi.encode(true)
         );
     }
 
     /// Mock HorizonStaking.getProvision to return a valid provision >= MIN_PROVISION.
     function _mockProvision(address sp) internal {
-        // Provision struct: tokens, createdAt, maxVerifierCut, thawingPeriod, tokensThawing, ...
-        // Only tokens and thawingPeriod matter for our checks.
-        bytes memory encoded = abi.encode(
-            ds.MIN_PROVISION(),   // tokens
-            uint256(0),           // createdAt
-            uint32(0),            // maxVerifierCut
-            uint64(14 days),      // thawingPeriod
-            uint256(0),           // tokensThawing
-            uint64(0)             // thawExpiration
-        );
+        IHorizonStaking.Provision memory p;
+        p.tokens         = ds.MIN_PROVISION();
+        p.thawingPeriod  = uint64(14 days);
+        p.maxVerifierCut = uint32(1_000_000);
+        p.createdAt      = uint64(block.timestamp); // must be non-zero — ProvisionManager checks this
         vm.mockCall(
             staking,
             abi.encodeWithSignature("getProvision(address,address)", sp, address(ds)),
-            encoded
+            abi.encode(p)
         );
     }
 
@@ -312,14 +309,11 @@ contract CampDataServiceTest is Test {
     }
 
     function test_setMinThawingPeriod_revertsIfTooShort() public {
-        vm.prank(owner);
+        uint64 minPeriod = ds.MIN_THAWING_PERIOD(); // read before setting up prank
         vm.expectRevert(
-            abi.encodeWithSelector(
-                ICampDataService.ThawingPeriodTooShort.selector,
-                ds.MIN_THAWING_PERIOD(),
-                1 days
-            )
+            abi.encodeWithSelector(ICampDataService.ThawingPeriodTooShort.selector, minPeriod, 1 days)
         );
+        vm.prank(owner);
         ds.setMinThawingPeriod(1 days);
     }
 

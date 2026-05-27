@@ -152,8 +152,8 @@ contract CampDataService is
         external
         override
         whenNotPaused
-        onlyAuthorizedForProvision(serviceProvider)
     {
+        _requireAuthorizedForProvision(serviceProvider);
         if (registeredProviders[serviceProvider]) {
             revert ProviderAlreadyRegistered(serviceProvider);
         }
@@ -174,8 +174,8 @@ contract CampDataService is
     /// @dev Not in IDataService — no override keyword.
     function deregister(address serviceProvider, bytes calldata)
         external
-        onlyAuthorizedForProvision(serviceProvider)
     {
+        _requireAuthorizedForProvision(serviceProvider);
         if (!registeredProviders[serviceProvider]) revert ProviderNotRegistered(serviceProvider);
         if (activeServiceCount(serviceProvider) > 0) revert ActiveServicesExist(serviceProvider);
 
@@ -198,8 +198,8 @@ contract CampDataService is
         external
         override
         whenNotPaused
-        onlyAuthorizedForProvision(serviceProvider)
     {
+        _requireAuthorizedForProvision(serviceProvider);
         if (!registeredProviders[serviceProvider]) revert ProviderNotRegistered(serviceProvider);
 
         (DataTier tier, string memory endpoint) = abi.decode(data, (DataTier, string));
@@ -225,8 +225,8 @@ contract CampDataService is
     function stopService(address serviceProvider, bytes calldata data)
         external
         override
-        onlyAuthorizedForProvision(serviceProvider)
     {
+        _requireAuthorizedForProvision(serviceProvider);
         DataTier tier = abi.decode(data, (DataTier));
 
         ServiceRegistration[] storage regs = _serviceRegs[serviceProvider];
@@ -301,8 +301,8 @@ contract CampDataService is
     function acceptProvisionPendingParameters(address serviceProvider, bytes calldata)
         external
         override
-        onlyAuthorizedForProvision(serviceProvider)
     {
+        _requireAuthorizedForProvision(serviceProvider);
         _acceptProvisionParameters(serviceProvider);
     }
 

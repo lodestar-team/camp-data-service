@@ -1,3 +1,5 @@
+// Public items in pricing/tap are intentional API surface; silence dead_code in this binary crate.
+#![allow(dead_code)]
 //! camp-gateway — TAP-payment layer in front of the camp REST API.
 //!
 //! Every request must carry a signed EIP-712 TAP receipt in the `TAP-Receipt`
