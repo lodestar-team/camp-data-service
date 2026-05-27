@@ -1,6 +1,0 @@
-query GraphNetwork($blockNumber: Int) {
-  graphNetwork(id: 1, block: { number: $blockNumber }) {
-    id
-    totalSupply
-  }
-}
